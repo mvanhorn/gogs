@@ -11,6 +11,7 @@ import (
 
 	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/applog"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/git"
@@ -160,7 +161,7 @@ func renderFile(c *context.Context, entry *git.TreeEntry, treeLink, rawLink stri
 			// Building code view blocks with line number on server side.
 			var fileContent string
 			if content, err := template.ToUTF8WithErr(p); err != nil {
-				log.Error("ToUTF8WithErr: %s", err)
+				applog.Logger.Errorf("ToUTF8WithErr: %s", err)
 				fileContent = string(p)
 			} else {
 				fileContent = content
@@ -214,7 +215,7 @@ func renderFile(c *context.Context, entry *git.TreeEntry, treeLink, rawLink stri
 func setEditorconfigIfExists(c *context.Context) {
 	ec, err := c.Repo.Editorconfig(c.Req.Context())
 	if err != nil && !git.IsErrRevisionNotExist(err) {
-		log.Warn("setEditorconfigIfExists.Editorconfig [repo_id: %d]: %v", c.Repo.Repository.ID, err)
+		applog.Logger.Warnf("setEditorconfigIfExists.Editorconfig [repo_id: %d]: %v", c.Repo.Repository.ID, err)
 		return
 	}
 	c.Data["Editorconfig"] = ec
