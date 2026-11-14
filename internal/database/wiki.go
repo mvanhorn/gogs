@@ -126,7 +126,7 @@ func (r *Repository) updateWikiPage(ctx context.Context, doer *User, oldTitle, t
 		message = "Update page '" + title + "'"
 	}
 	sig := &git.Signature{Name: doer.DisplayName(), Email: doer.Email}
-	_, err = commitAndPush(ctx, r.WikiPath(), parent, branch, message, sig, sig, nil, func(tmpRepo *git.Repository) error {
+	_, err = commitAndPush(ctx, r.WikiPath(), parent, branch, message, sig, sig, git.PushOptions{}, func(tmpRepo *git.Repository) error {
 		if parent != nil {
 			if isNew {
 				entry, err := treeEntry(ctx, parent, filename)
@@ -176,7 +176,7 @@ func (r *Repository) DeleteWikiPage(ctx context.Context, doer *User, title strin
 	title = ToWikiPageName(title)
 	filename := title + ".md"
 	sig := &git.Signature{Name: doer.DisplayName(), Email: doer.Email}
-	_, err = commitAndPush(ctx, r.WikiPath(), parent, branch, "Delete page '"+title+"'", sig, sig, nil, func(tmpRepo *git.Repository) error {
+	_, err = commitAndPush(ctx, r.WikiPath(), parent, branch, "Delete page '"+title+"'", sig, sig, git.PushOptions{}, func(tmpRepo *git.Repository) error {
 		entry, err := treeEntry(ctx, parent, filename)
 		if err != nil {
 			return err
