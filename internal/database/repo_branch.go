@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"slices"
-	"strconv"
 	"strings"
 
 	"github.com/cockroachdb/errors"
@@ -132,8 +131,6 @@ func UpdateProtectBranch(protectBranch *ProtectBranch) (err error) {
 	if err != nil {
 		return errors.Wrap(err, "get repository")
 	}
-	delegateHooksPool.CheckIn(strconv.FormatInt(repo.ID, 10))
-	defer delegateHooksPool.CheckOut(strconv.FormatInt(repo.ID, 10))
 	if err = enforceProtectBranch(repo, protectBranch); err != nil {
 		return err
 	}
@@ -157,7 +154,7 @@ func UpdateProtectBranch(protectBranch *ProtectBranch) (err error) {
 	if err = sess.Commit(); err != nil {
 		return err
 	}
-	return repo.syncDelegateHooks()
+	return repo.SyncDelegateHooks()
 }
 
 // enforceProtectBranch installs the pre-receive hook that enforces the
@@ -180,8 +177,6 @@ func UpdateOrgProtectBranch(repo *Repository, protectBranch *ProtectBranch, whit
 	} else if !repo.Owner.IsOrganization() {
 		return errors.Newf("expect repository owner to be an organization")
 	}
-	delegateHooksPool.CheckIn(strconv.FormatInt(repo.ID, 10))
-	defer delegateHooksPool.CheckOut(strconv.FormatInt(repo.ID, 10))
 	if err = enforceProtectBranch(repo, protectBranch); err != nil {
 		return err
 	}
@@ -289,7 +284,7 @@ func UpdateOrgProtectBranch(repo *Repository, protectBranch *ProtectBranch, whit
 	if err = sess.Commit(); err != nil {
 		return err
 	}
-	return repo.syncDelegateHooks()
+	return repo.SyncDelegateHooks()
 }
 
 // GetProtectBranchesByRepoID returns a list of *ProtectBranch in given repository.
