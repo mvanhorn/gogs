@@ -27,6 +27,9 @@ import (
 	"github.com/go-macaron/session"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel/attribute"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
@@ -48,6 +51,7 @@ import (
 	"gogs.io/gogs/internal/route/repo"
 	"gogs.io/gogs/internal/route/user"
 	"gogs.io/gogs/internal/ssh"
+	"gogs.io/gogs/internal/telemetry"
 	"gogs.io/gogs/internal/template"
 	"gogs.io/gogs/internal/template/highlight"
 	"gogs.io/gogs/internal/urlx"
@@ -62,7 +66,18 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 	if err != nil {
 		return errors.Wrap(err, "initialize application")
 	}
-	shutdownTracing, err := tracing.Init(ctx)
+	var traceStore *telemetry.Store
+	var spanProcessors []sdktrace.SpanProcessor
+	if conf.Tracing.Enabled {
+		traceStore = telemetry.NewStore(telemetry.Options{
+			MaxMemory:                conf.Tracing.MaxMemory << 20,
+			MaxAge:                   conf.Tracing.MaxAge,
+			SlowThreshold:            conf.Tracing.SlowThreshold,
+			SamplesPerRoutePerMinute: conf.Tracing.SamplesPerRoutePerMinute,
+		})
+		spanProcessors = append(spanProcessors, traceStore)
+	}
+	shutdownTracing, err := tracing.Init(ctx, spanProcessors...)
 	if err != nil {
 		return errors.Wrap(err, "initialize tracing")
 	}
@@ -70,13 +85,15 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 		// Stopping Gogs must not wait long on a collector that is down.
 		defer shutdownTracing(5 * time.Second)
 	}
+	health := newHealth(traceStore)
+	go health.Run(ctx)
 
 	m, err := newMacaron()
 	if err != nil {
 		return errors.Wrap(err, "initialize macaron")
 	}
 
-	webHandler, err := newRoutingHandler()
+	webHandler, err := newRoutingHandler(traceStore, health)
 	if err != nil {
 		return errors.Wrap(err, "initialize web handler")
 	}
@@ -137,7 +154,8 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 		// ***** START: Admin *****
 		m.Group("/admin", func() {
 			m.Get("", func(c *context.Context) { c.ServeWeb() })
-			m.Get("/^:page(operations|users|orgs|repos|auths|notices|config|monitor)$", func(c *context.Context) { c.ServeWeb() })
+			m.Get("/^:page(operations|users|orgs|repos|auths|notices|config|monitor|traces)$", func(c *context.Context) { c.ServeWeb() })
+			m.Get("/traces/:id", func(c *context.Context) { c.ServeWeb() })
 			m.Get("/users/new", func(c *context.Context) { c.ServeWeb() })
 			m.Get("/users/:userid", func(c *context.Context) {
 				user, err := database.Handle.Users().GetByID(c.Req.Context(), c.ParamsInt64(":userid"))
@@ -670,11 +688,37 @@ func Run(ctx gocontext.Context, configPath string, portOverride int) error {
 	}
 }
 
+// newHealth returns the measurements of the server that the admin panel shows,
+// including the requests the store records when it is not nil.
+func newHealth(traceStore *telemetry.Store) *telemetry.Health {
+	_, dbLimit := database.ConnectionsInUse()
+	return telemetry.NewHealth(traceStore,
+		telemetry.Gauge{Key: "dbConnections", Limit: float64(dbLimit), Read: func() (float64, bool) {
+			inUse, _ := database.ConnectionsInUse()
+			return float64(inUse), true
+		}},
+		telemetry.Gauge{Key: "gitProcesses", Read: func() (float64, bool) {
+			return float64(git.RunningCommands()), true
+		}},
+		telemetry.Gauge{Key: "mirrorQueue", Read: func() (float64, bool) {
+			return float64(database.MirrorQueue.Len()), true
+		}},
+	)
+}
+
 // newTracingHandler returns a handler that records a span for every request, so
 // that the spans of what the request runs, e.g., Git operations, are grouped
 // under it.
 func newTracingHandler(h http.Handler) http.Handler {
-	return otelhttp.NewHandler(h, "", otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
+	// The route is only known once the request was routed, after the span
+	// started, so it is added to the span then.
+	routed := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		h.ServeHTTP(w, r)
+		if _, route, ok := strings.Cut(r.Pattern, " "); ok {
+			trace.SpanFromContext(r.Context()).SetAttributes(attribute.String("http.route", route))
+		}
+	})
+	return otelhttp.NewHandler(routed, "", otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
 		if r.Pattern != "" {
 			return r.Pattern
 		}
@@ -682,10 +726,14 @@ func newTracingHandler(h http.Handler) http.Handler {
 	}))
 }
 
-func newRoutingHandler() (http.Handler, error) {
+// newRoutingHandler returns the Flamego handler. The admin panel shows the
+// traces of the store and the measurements of health, either of which may be
+// nil.
+func newRoutingHandler(traceStore *telemetry.Store, health *telemetry.Health) (http.Handler, error) {
 	f := flamego.New()
 	f.Use(flamego.Recovery(flamego.RecoveryOptions{PlainText: true}))
 	f.Use(flamegoInjector)
+	f.Map(traceStore, health)
 	f.Use(captcha.Captchaer(captcha.Options{URLPrefix: "/captcha/"}))
 
 	cacherOpts, err := parseCacheOptions(conf.Cache)

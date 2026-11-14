@@ -21,7 +21,7 @@ func TestRequireViewAccess(t *testing.T) {
 		conf.Auth.RequireSigninView, conf.Auth.RequireEmailConfirmation = beforeSigninView, beforeConfirmation
 	})
 
-	handler, err := newRoutingHandler()
+	handler, err := newRoutingHandler(nil, nil)
 	require.NoError(t, err)
 
 	// The gate runs before any database or Git access, so these requests are
@@ -106,7 +106,7 @@ func TestRequireAuthenticated(t *testing.T) {
 	// content.
 	conf.Auth.RequireSigninView = false
 
-	handler, err := newRoutingHandler()
+	handler, err := newRoutingHandler(nil, nil)
 	require.NoError(t, err)
 
 	for _, path := range []string{
@@ -151,7 +151,7 @@ func TestRequireAuthenticated(t *testing.T) {
 }
 
 func TestRequireAdmin(t *testing.T) {
-	handler, err := newRoutingHandler()
+	handler, err := newRoutingHandler(nil, nil)
 	require.NoError(t, err)
 
 	// An authenticated user who is not a site admin reaches none of the admin panel,
@@ -170,6 +170,10 @@ func TestRequireAdmin(t *testing.T) {
 		{http.MethodGet, "/api/web/admin/auths/1"},
 		{http.MethodPatch, "/api/web/admin/auths/1"},
 		{http.MethodDelete, "/api/web/admin/auths/1"},
+		{http.MethodGet, "/api/web/admin/health"},
+		{http.MethodGet, "/api/web/admin/traces"},
+		{http.MethodGet, "/api/web/admin/traces/overview"},
+		{http.MethodGet, "/api/web/admin/traces/0123456789abcdef0123456789abcdef"},
 		{http.MethodGet, "/api/web/admin/users"},
 		{http.MethodPost, "/api/web/admin/users"},
 		{http.MethodGet, "/api/web/admin/users/1"},

@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { webContext } from "@/lib/context";
+import { fill } from "@/lib/format";
 import { formErrors } from "@/lib/queries/request";
 import {
   type Credential,
@@ -39,13 +40,6 @@ const DATE_FMT = new Intl.DateTimeFormat(webContext.lang, { year: "numeric", mon
 const ROW_CLASS = "flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-(--color-border) py-3";
 const TEXTAREA_CLASS =
   "block w-full rounded-md border border-(--color-input) bg-(--color-background) px-3 py-2 font-mono text-sm text-(--color-foreground) outline-none transition-colors focus-visible:border-(--color-ring) focus-visible:ring-1 focus-visible:ring-(--color-ring) disabled:cursor-not-allowed disabled:opacity-60 aria-invalid:border-(--color-destructive)";
-
-// fill puts values into a translated message in the order its Go
-// placeholders, such as `%s`, `%d` or `%[1]s`, appear.
-function fill(message: string, ...values: (string | number)[]) {
-  let i = 0;
-  return message.replace(/%(?:\[\d+\])?[sdv]/g, () => String(values[i++] ?? ""));
-}
 
 // focusOnError moves focus to the first field of a failed form that has an
 // error.
