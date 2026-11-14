@@ -9,8 +9,6 @@ import (
 	"strings"
 	"time"
 
-	log "unknwon.dev/clog/v2"
-
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/git"
