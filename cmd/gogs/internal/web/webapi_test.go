@@ -107,7 +107,7 @@ func TestRequireAuthenticated(t *testing.T) {
 	// content.
 	conf.Auth.RequireSigninView = false
 
-	handler, err := newRoutingHandler()
+	handler, err := newRoutingHandler(logx.NewNoopLogger())
 	require.NoError(t, err)
 
 	for _, path := range []string{
