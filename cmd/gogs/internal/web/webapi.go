@@ -267,6 +267,8 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			f.Get("/commits/{path: **}", withRepoCode, getRepoCommits)
 			f.Get("/search", withRepoCode, getRepoSearch)
 			f.Get("/search/{path: **}", withRepoCode, getRepoSearch)
+			f.Get("/paths", withRepoCode, getRepoPaths)
+			f.Get("/paths/{path: **}", withRepoCode, getRepoPaths)
 			f.Get("/compare/"+compareRangeRoute, withRepoCode, getRepoCompare)
 			f.Group("/wiki", func() {
 				f.Get("", getRepoWiki)
@@ -343,6 +345,7 @@ func mountWebAPIRoutes(f *flamego.Flame) {
 			f.Get("/organizations", getExploreOrganizations)
 		}, requireViewAccess)
 		f.Get("/search/code", requireViewAccess, getCodeSearch)
+		f.Get("/search/issues", requireViewAccess, getIssueSearch)
 		f.Group("/users/{username}", func() {
 			f.Get("", getUserProfile)
 			f.Get("/repos", getUserProfileRepos)
