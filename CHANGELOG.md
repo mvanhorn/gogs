@@ -12,7 +12,7 @@ All notable changes to Gogs are documented in this file.
 - Git protocol v2 for clones and fetches over HTTP and SSH. With your own OpenSSH server, add `AcceptEnv GIT_PROTOCOL` to `sshd_config` to enable it over SSH. [#8485](https://github.com/gogs/gogs/pull/8485)
 - Tracing of HTTP requests and Git operations, exported over OTLP when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. [#8487](https://github.com/gogs/gogs/pull/8487)
 - Repositories with SHA-256 object IDs, chosen when creating a repository or with `object_format` in the API. [#8496](https://github.com/gogs/gogs/pull/8496)
-- The admin panel shows recent traces of requests, with search by trace ID, and charts of server health over the last hour and day, kept in memory without a collector. Set `[tracing] ENABLED = false` to turn it off. [#8554](https://github.com/gogs/gogs/pull/8554)
+- The admin panel shows recent traces of requests, with search by trace ID, and charts of server health over the last hour and day on the Monitoring page, kept in memory without a collector. Set `[tracing] ENABLED = false` to turn it off. The admin dashboard is now called Overview. [#8554](https://github.com/gogs/gogs/pull/8554)
 
 ### Changed
 

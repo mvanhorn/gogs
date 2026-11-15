@@ -9,13 +9,11 @@ import { FormAlert, FormField } from "@/components/FormField";
 import { RichText } from "@/components/RichText";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { fill } from "@/lib/format";
 import {
   ADMIN_OPERATIONS,
   type AdminConfig as AdminConfigData,
   type AdminDashboard as AdminDashboardData,
   type AdminHealth,
-  type AdminHealthRange,
   type AdminMonitor as AdminMonitorData,
   type AdminOperation,
   type AdminReportRow,
@@ -131,21 +129,13 @@ const OPERATION_LABELS: Record<AdminOperation, string> = {
   "reinit-missing-repos": "admin.dashboard.reinit_missing_repos",
 };
 
-// AdminDashboard shows how the site was built, what its database holds and how
-// the server is doing.
-export function AdminDashboard({
-  dashboard,
-  health,
-  healthRange,
-}: {
-  dashboard: AdminDashboardData;
-  health: AdminHealth;
-  healthRange: AdminHealthRange;
-}) {
+// AdminDashboard is the overview of the site: how it was built, what its
+// database holds and what the server uses right now.
+export function AdminDashboard({ dashboard }: { dashboard: AdminDashboardData }) {
   const { t } = useTranslation();
   return (
     <AdminLayout active="dashboard">
-      <h1 className="mb-4 text-xl font-semibold">{t("admin.dashboard")}</h1>
+      <h1 className="mb-4 text-xl font-semibold">{t("admin.overview")}</h1>
       <Section id="build-info" title={t("admin.dashboard.build_info")}>
         <Facts>
           <Fact label={t("admin.dashboard.app_ver")}>{dashboard.appVersion}</Fact>
@@ -174,20 +164,7 @@ export function AdminDashboard({
           <RichText text={dashboard.statistics} />
         </p>
       </Section>
-      {/* Remount on a range switch, so that a pinned moment does not outlive its range. */}
-      <ServerHealth key={healthRange} health={health} range={healthRange}>
-        <details className="mt-4 text-sm">
-          <summary className="cursor-pointer text-(--color-muted-foreground) hover:text-(--color-foreground)">
-            {fill(
-              t("admin.health.all_numbers"),
-              dashboard.systemStatus.groups.reduce((n, group) => n + group.length, 0),
-            )}
-          </summary>
-          <div className="mt-4">
-            <Report section={dashboard.systemStatus} />
-          </div>
-        </details>
-      </ServerHealth>
+      <Report section={dashboard.systemStatus} />
     </AdminLayout>
   );
 }
@@ -329,11 +306,13 @@ function Empty() {
 }
 
 // AdminMonitor lists the scheduled tasks and the Git processes running now.
-export function AdminMonitor({ monitor }: { monitor: AdminMonitorData }) {
+export function AdminMonitor({ monitor, health }: { monitor: AdminMonitorData; health: AdminHealth }) {
   const { t } = useTranslation();
   return (
     <AdminLayout active="monitor">
       <h1 className="mb-4 text-xl font-semibold">{t("admin.monitor")}</h1>
+      {/* Remount on a range switch, so that a pinned moment does not outlive its range. */}
+      <ServerHealth key={health.range} health={health} range={health.range} />
       <Section id="cron" title={t("admin.monitor.cron")}>
         {monitor.cronTasks.length > 0 ? (
           <ul className="border-t border-(--color-border)">

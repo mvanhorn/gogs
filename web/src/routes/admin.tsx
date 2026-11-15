@@ -2,12 +2,12 @@ import { type AnyRoute, createRoute, redirect } from "@tanstack/react-router";
 
 import { LoaderResponseError, loadAuthenticatedPage } from "@/lib/loader-error";
 import {
-  type DashboardSearch,
   type ListSearch,
+  type MonitorSearch,
   type PageSearch,
   type TraceSearch,
-  validateDashboardSearch,
   validateListSearch,
+  validateMonitorSearch,
   validatePageSearch,
   validateTraceSearch,
 } from "@/lib/page-search";
@@ -38,13 +38,9 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
   const dashboardRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/admin",
-    validateSearch: validateDashboardSearch,
-    loaderDeps: ({ search }: { search: DashboardSearch }) => ({ health: search.health ?? ("1h" as const) }),
-    loader: ({ deps }) =>
-      loadAuthenticatedPage(() => Promise.all([fetchAdminDashboard(), fetchAdminHealth(deps.health)])),
+    loader: () => loadAuthenticatedPage(fetchAdminDashboard),
     component: function Dashboard() {
-      const [dashboard, health] = dashboardRoute.useLoaderData();
-      return <AdminDashboard dashboard={dashboard} health={health} healthRange={health.range} />;
+      return <AdminDashboard dashboard={dashboardRoute.useLoaderData()} />;
     },
   });
 
@@ -66,9 +62,13 @@ export function createAdminRoutes(rootRoute: AnyRoute) {
   const monitorRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/admin/monitor",
-    loader: () => loadAuthenticatedPage(fetchAdminMonitor),
+    validateSearch: validateMonitorSearch,
+    loaderDeps: ({ search }: { search: MonitorSearch }) => ({ health: search.health ?? ("1h" as const) }),
+    loader: ({ deps }) =>
+      loadAuthenticatedPage(() => Promise.all([fetchAdminMonitor(), fetchAdminHealth(deps.health)])),
     component: function Monitor() {
-      return <AdminMonitor monitor={monitorRoute.useLoaderData()} />;
+      const [monitor, health] = monitorRoute.useLoaderData();
+      return <AdminMonitor monitor={monitor} health={health} />;
     },
   });
 

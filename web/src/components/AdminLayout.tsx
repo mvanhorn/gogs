@@ -19,7 +19,7 @@ export type AdminPage =
 
 // NAV lists the pages of the admin panel.
 const NAV: { page: AdminPage; path: string; label: string }[] = [
-  { page: "dashboard", path: "", label: "admin.dashboard" },
+  { page: "dashboard", path: "", label: "admin.overview" },
   { page: "operations", path: "/operations", label: "admin.dashboard.operations" },
   { page: "users", path: "/users", label: "admin.users" },
   { page: "orgs", path: "/orgs", label: "admin.organizations" },

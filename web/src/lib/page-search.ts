@@ -29,13 +29,13 @@ export function validateListSearch(search: Record<string, unknown>): ListSearch 
   return { q: q || undefined, ...validatePageSearch(search) };
 }
 
-// Search params of the admin dashboard. The last hour of server health stays
-// implicit.
-export interface DashboardSearch {
+// Search params of the admin monitoring page. The last hour of server health
+// stays implicit.
+export interface MonitorSearch {
   health?: "24h";
 }
 
-export function validateDashboardSearch(search: Record<string, unknown>): DashboardSearch {
+export function validateMonitorSearch(search: Record<string, unknown>): MonitorSearch {
   return { health: search.health === "24h" ? "24h" : undefined };
 }
 
