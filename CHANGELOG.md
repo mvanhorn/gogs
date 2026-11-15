@@ -56,6 +56,7 @@ All notable changes to Gogs are documented in this file.
 - The API response for creating a repository now reports the correct default branch, empty state, creation and update times, and watcher count instead of blank or zero values. [#8497](https://github.com/gogs/gogs/pull/8497)
 - Quoted values in authentication source files under `custom/conf/auth.d` are now read in full when they contain `#` or `;`, e.g., `bind_password = "p#ss"`. Previously they were cut at the first `#` or `;`. [#8489](https://github.com/gogs/gogs/pull/8489)
 - Getting the `.editorconfig` definition of an empty repository through the API responded with 500 instead of 404. [#8454](https://github.com/gogs/gogs/pull/8454)
+- SSH keys of security keys, e.g., `sk-ssh-ed25519@openssh.com` keys of a YubiKey, can be added. Instances with their own `[ssh.minimum_key_sizes]` need to add `ED25519-SK = 256` and `ECDSA-SK = 256` to it. [#8580](https://github.com/gogs/gogs/pull/8580)
 
 ### Removed
 
