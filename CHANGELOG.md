@@ -57,6 +57,7 @@ All notable changes to Gogs are documented in this file.
 - When the first branch pushed to an empty repository has a different name than the repository's default branch, it now becomes the default branch, so cloning checks it out instead of producing an empty working tree. Mirrors whose default branch no longer exists now follow the default branch of the source repository. [#8497](https://github.com/gogs/gogs/pull/8497)
 - The API response for creating a repository now reports the correct default branch, empty state, creation and update times, and watcher count instead of blank or zero values. [#8497](https://github.com/gogs/gogs/pull/8497)
 - Quoted values in authentication source files under `custom/conf/auth.d` are now read in full when they contain `#` or `;`, e.g., `bind_password = "p#ss"`. Previously they were cut at the first `#` or `;`. [#8489](https://github.com/gogs/gogs/pull/8489)
+- The API now lists no branches for an empty repository instead of failing, and creating a file through the contents API in an empty repository makes its first commit. [#8396](https://github.com/gogs/gogs/issues/8396)
 
 ### Removed
 
