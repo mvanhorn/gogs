@@ -1603,7 +1603,9 @@ func updateRepository(e Engine, repo *Repository, visibilityChanged bool) (err e
 			return errors.Newf("getRepositoriesByForkID: %v", err)
 		}
 		for i := range forkRepos {
-			forkRepos[i].IsPrivate = repo.IsPrivate
+			// Forks follow their base repository, except that forks kept private by
+			// FORCE_PRIVATE stay private.
+			forkRepos[i].IsPrivate = repo.IsPrivate || (conf.Repository.ForcePrivate && forkRepos[i].IsPrivate)
 			forkRepos[i].IsUnlisted = repo.IsUnlisted
 			if err = updateRepository(e, forkRepos[i], true); err != nil {
 				return errors.Newf("updateRepository[%d]: %v", forkRepos[i].ID, err)
@@ -2545,7 +2547,7 @@ func ForkRepository(ctx context.Context, doer, owner *User, baseRepo *Repository
 		LowerName:     strings.ToLower(name),
 		Description:   desc,
 		DefaultBranch: baseRepo.DefaultBranch,
-		IsPrivate:     baseRepo.IsPrivate,
+		IsPrivate:     baseRepo.IsPrivate || conf.Repository.ForcePrivate,
 		IsUnlisted:    baseRepo.IsUnlisted,
 		IsFork:        true,
 		ForkID:        baseRepo.ID,

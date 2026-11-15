@@ -9,6 +9,7 @@ import (
 	"github.com/go-macaron/i18n"
 	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
 )
 
@@ -65,6 +66,9 @@ type repoForkOptions struct {
 	Base repoForkBaseInfo `json:"base"`
 	// Owners are the viewer and the organizations they own.
 	Owners []repoNewOwner `json:"owners"`
+	// ForcePrivate is true when the site makes every new repository, including
+	// forks, private.
+	ForcePrivate bool `json:"forcePrivate"`
 }
 
 func getRepoFork(viewer *database.User, base *forkBase) (statusCode int, resp any, err error) {
@@ -81,7 +85,8 @@ func getRepoFork(viewer *database.User, base *forkBase) (statusCode int, resp an
 			IsPrivate:   base.IsPrivate,
 			IsUnlisted:  base.IsUnlisted,
 		},
-		Owners: owners,
+		Owners:       owners,
+		ForcePrivate: conf.Repository.ForcePrivate,
 	}, nil
 }
 
