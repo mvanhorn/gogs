@@ -67,6 +67,9 @@ type repoPullInfo struct {
 	// MergeMessages are the messages the commits of the merge styles that
 	// create one start with, for viewers who can merge.
 	MergeMessages map[database.MergeStyle]database.MergeMessage `json:"mergeMessages,omitempty"`
+	// HeadBranchDeleted is whether the head branch of the merged pull request
+	// in the same repository is gone.
+	HeadBranchDeleted bool `json:"headBranchDeleted,omitempty"`
 	// ViewerCanDeleteBranch is whether the viewer can delete the head branch
 	// after the merge: a branch of the same repository that is not protected
 	// and has no new commits.
@@ -140,7 +143,9 @@ func describePull(ctx context.Context, repoCtx *repoContext, issue *database.Iss
 		}
 		info.CommitCount, info.FileCount = len(commits), len(names)
 
-		if repoCtx.Viewer.CanWrite() && pull.HeadRepoID == pull.BaseRepoID && baseGitRepo.HasBranch(ctx, pull.HeadBranch) {
+		if pull.HeadRepoID == pull.BaseRepoID && !baseGitRepo.HasBranch(ctx, pull.HeadBranch) {
+			info.HeadBranchDeleted = true
+		} else if repoCtx.Viewer.CanWrite() && pull.HeadRepoID == pull.BaseRepoID {
 			protected, err := database.GetProtectBranchOfRepoByName(repo.ID, pull.HeadBranch)
 			if err != nil && !database.IsErrBranchNotExist(err) {
 				return nil, nil, nil, errors.Wrap(err, "get protected branch")
@@ -304,6 +309,18 @@ func postRepoPullMerge(c flamego.Context, viewer *database.User, repoCtx *repoCo
 		log.Error("postRepoPullMerge: merge pull request %d: %v", pull.ID, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "merge")
 	}
+
+	// The merge is done, so failing to delete the branch only leaves it be.
+	if repoCtx.Repo.PullsDeleteBranch {
+		info, _, _, err := describePull(c.Request().Context(), repoCtx, issue)
+		if err != nil {
+			log.Error("postRepoPullMerge: describe pull request %d: %v", pull.ID, err)
+		} else if info.ViewerCanDeleteBranch {
+			if _, err = deleteHeadBranch(c.Request().Context(), viewer, repoCtx, pull); err != nil {
+				log.Error("postRepoPullMerge: delete head branch of pull request %d: %v", pull.ID, err)
+			}
+		}
+	}
 	return http.StatusNoContent, nil, nil
 }
 
@@ -320,21 +337,33 @@ func deleteRepoPullBranch(c flamego.Context, l i18n.Locale, viewer *database.Use
 	} else if !info.ViewerCanDeleteBranch {
 		return http.StatusNotFound, nil, errors.New("branch cannot be deleted")
 	}
+	deleted, err := deleteHeadBranch(ctx, viewer, repoCtx, pull)
+	if err != nil {
+		log.Error("deleteRepoPullBranch: delete head branch of pull request %d: %v", pull.ID, err)
+		return http.StatusInternalServerError, nil, err
+	} else if !deleted {
+		return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("repo.pulls.delete_branch_has_new_commits")}, nil
+	}
+	return http.StatusNoContent, nil, nil
+}
+
+// deleteHeadBranch deletes the head branch of the merged pull request in the
+// base repository, unless it has commits that were not merged, and returns
+// whether it did.
+func deleteHeadBranch(ctx context.Context, viewer *database.User, repoCtx *repoContext, pull *database.PullRequest) (deleted bool, err error) {
+	repo := repoCtx.Repo
 	gitRepo, err := openRepoGit(repoCtx)
 	if err != nil {
-		log.Error("deleteRepoPullBranch: open repository %d: %v", repo.ID, err)
-		return http.StatusInternalServerError, nil, errors.Wrap(err, "open repository")
+		return false, errors.Wrap(err, "open repository")
 	}
 	commitID, err := gitRepo.BranchCommitID(ctx, pull.HeadBranch)
 	if err != nil {
-		log.Error("deleteRepoPullBranch: get commit of branch %q in repository %d: %v", pull.HeadBranch, repo.ID, err)
-		return http.StatusInternalServerError, nil, errors.Wrap(err, "get branch commit")
+		return false, errors.Wrap(err, "get branch commit")
 	} else if commitID != pull.MergedCommitID {
-		return http.StatusConflict, &bindingErrorResponse{Error: l.Tr("repo.pulls.delete_branch_has_new_commits")}, nil
+		return false, nil
 	}
 	if err = gitRepo.DeleteBranch(ctx, pull.HeadBranch, git.DeleteBranchOptions{Force: true}); err != nil {
-		log.Error("deleteRepoPullBranch: delete branch %q of repository %d: %v", pull.HeadBranch, repo.ID, err)
-		return http.StatusInternalServerError, nil, errors.Wrap(err, "delete branch")
+		return false, errors.Wrap(err, "delete branch")
 	}
 	if err = database.PrepareWebhooks(repo, database.HookEventTypeDelete, &apiv1types.WebhookDeletePayload{
 		Ref:        pull.HeadBranch,
@@ -343,7 +372,7 @@ func deleteRepoPullBranch(c flamego.Context, l i18n.Locale, viewer *database.Use
 		Repo:       repo.APIFormatLegacy(nil),
 		Sender:     viewer.APIFormat(),
 	}); err != nil {
-		log.Error("deleteRepoPullBranch: prepare webhooks for deleting branch %q of repository %d: %v", pull.HeadBranch, repo.ID, err)
+		log.Error("deleteHeadBranch: prepare webhooks for deleting branch %q of repository %d: %v", pull.HeadBranch, repo.ID, err)
 	}
-	return http.StatusNoContent, nil, nil
+	return true, nil
 }

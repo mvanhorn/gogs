@@ -273,6 +273,12 @@ function MergeBox({ issueRef, data }: { issueRef: IssueRef; data: RepoPullData }
         />
       </div>
     );
+  } else if (pull.state === "merged" && pull.headBranchDeleted) {
+    body = (
+      <p className="border-t border-(--color-border) px-4 py-3 text-sm text-(--color-muted-foreground)">
+        <RichText text={t("repo.pulls.branch_deleted")} code={[pull.headBranch]} />
+      </p>
+    );
   } else if (pull.state === "mergeable" && pull.viewerCanMerge) {
     const styles: MergeStyle[] = [];
     if (pull.allowMerge) styles.push("create_merge_commit");

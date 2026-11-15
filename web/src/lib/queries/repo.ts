@@ -187,6 +187,7 @@ export interface RepoAdvancedSettings {
   pullsAllowRebase: boolean;
   pullsAllowSquash: boolean;
   pullsAllowMerge: boolean;
+  pullsDeleteBranch: boolean;
   // The presets of the messages merge commits and squashing start with,
   // empty for the default message.
   pullsMergeMessage: "" | "title" | "title_description";
@@ -751,6 +752,9 @@ export interface RepoPullInfo {
   // create one start with, for viewers who can merge.
   mergeMessages?: Partial<Record<MergeStyle, MergeMessage>>;
   viewerCanDeleteBranch: boolean;
+  // headBranchDeleted is whether the head branch of the merged pull request
+  // in the same repository is gone.
+  headBranchDeleted?: boolean;
   // diff is the commits the changes are between, in the repository that has
   // both, unless the pull request is broken.
   diff?: { base: string; head: string; owner: string; name: string };
