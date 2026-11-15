@@ -13,9 +13,6 @@ All notable changes to Gogs are documented in this file.
 - Tracing of HTTP requests and Git operations, exported over OTLP when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. [#8487](https://github.com/gogs/gogs/pull/8487)
 - Repositories with SHA-256 object IDs, chosen when creating a repository or with `object_format` in the API. [#8496](https://github.com/gogs/gogs/pull/8496)
 - Pull requests can be merged with "Squash and merge", which adds their changes to the base branch as a single commit. Repository admins enable it in the repository settings.
-- The commit message of a merge is edited as a title and an extended description, and repository admins choose the message each merge method starts with, as on GitHub. Squash commits credit the other authors of the pull request with `Co-authored-by` lines. [#8561](https://github.com/gogs/gogs/pull/8561)
-- Edits to a merge commit message are kept in the browser for a day, and the merge method you last used in a repository is selected by default. [#8561](https://github.com/gogs/gogs/pull/8561)
-- Repository admins can turn off merge commits, and have head branches deleted automatically once their pull requests are merged. [#8561](https://github.com/gogs/gogs/pull/8561)
 
 ### Changed
 
@@ -28,8 +25,6 @@ All notable changes to Gogs are documented in this file.
 - Markdown is now rendered like GitHub renders it, e.g., bare `www.` links and email addresses become links, and list items separated by blank lines are rendered as paragraphs. [#8519](https://github.com/gogs/gogs/pull/8519)
 - Markdown renders up to five times faster. [#8519](https://github.com/gogs/gogs/pull/8519)
 - Markdown and Org-mode documents larger than `[ui] MAX_DISPLAY_FILE_SIZE` are shown as plain text instead of being rendered. [#8519](https://github.com/gogs/gogs/pull/8519)
-- The default merge commit message is now "Merge pull request #N from owner/branch", followed by the pull request title. [#8561](https://github.com/gogs/gogs/pull/8561)
-- Merging a pull request with a merge method the repository does not allow now fails instead of creating a merge commit. [#8561](https://github.com/gogs/gogs/pull/8561)
 
 ### Fixed
 
