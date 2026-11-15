@@ -57,6 +57,7 @@ All notable changes to Gogs are documented in this file.
 - Quoted values in authentication source files under `custom/conf/auth.d` are now read in full when they contain `#` or `;`, e.g., `bind_password = "p#ss"`. Previously they were cut at the first `#` or `;`. [#8489](https://github.com/gogs/gogs/pull/8489)
 - Getting the `.editorconfig` definition of an empty repository through the API responded with 500 instead of 404. [#8454](https://github.com/gogs/gogs/pull/8454)
 - With `[repository] FORCE_PRIVATE = true`, repositories created through the API and forks of public repositories are now private, and only site admins can make a private repository public. [#8186](https://github.com/gogs/gogs/issues/8186)
+- Forks can no longer be more visible than their base repository, e.g., a private fork allows public access to its wiki or issues only when its base allows it. [#8186](https://github.com/gogs/gogs/issues/8186)
 
 ### Removed
 

@@ -2,6 +2,7 @@ import { type AriaAttributes, type ReactElement, type ReactNode, cloneElement } 
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
 // FormField labels an input and shows its error, or its helper text when there
 // is no error, wiring both to the input for assistive tech.
@@ -57,15 +58,26 @@ export function CheckboxField({
   label,
   checked,
   onChange,
+  disabled,
 }: {
   id: string;
   label: ReactNode;
   checked: boolean;
   onChange: (checked: boolean) => void;
+  disabled?: boolean;
 }) {
   return (
-    <label htmlFor={id} className="flex cursor-pointer items-start gap-2.5 text-sm">
-      <Checkbox id={id} className="mt-0.5" checked={checked} onCheckedChange={(c) => onChange(c === true)} />
+    <label
+      htmlFor={id}
+      className={cn("flex items-start gap-2.5 text-sm", disabled ? "cursor-not-allowed" : "cursor-pointer")}
+    >
+      <Checkbox
+        id={id}
+        className="mt-0.5"
+        checked={checked}
+        disabled={disabled}
+        onCheckedChange={(c) => onChange(c === true)}
+      />
       <span>{label}</span>
     </label>
   );
