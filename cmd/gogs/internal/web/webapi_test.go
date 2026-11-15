@@ -150,7 +150,7 @@ func TestRequireAuthenticated(t *testing.T) {
 }
 
 func TestRequireAdmin(t *testing.T) {
-	handler, err := newRoutingHandler()
+	handler, err := newRoutingHandler(logx.NewNoopLogger())
 	require.NoError(t, err)
 
 	// An authenticated user who is not a site admin reaches none of the admin panel,
