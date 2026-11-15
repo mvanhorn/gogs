@@ -274,10 +274,14 @@ function MergeBox({ issueRef, data }: { issueRef: IssueRef; data: RepoPullData }
       </div>
     );
   } else if (pull.state === "mergeable" && pull.viewerCanMerge) {
-    const styles: MergeStyle[] = ["create_merge_commit"];
+    const styles: MergeStyle[] = [];
+    if (pull.allowMerge) styles.push("create_merge_commit");
     if (pull.allowSquash) styles.push("squash_and_merge");
     if (pull.allowRebase) styles.push("rebase_before_merging");
-    body = <MergeForm issueRef={issueRef} styles={styles} defaultMessages={pull.mergeMessages ?? {}} />;
+    body =
+      styles.length > 0 ? (
+        <MergeForm issueRef={issueRef} styles={styles} defaultMessages={pull.mergeMessages ?? {}} />
+      ) : null;
   }
 
   return (

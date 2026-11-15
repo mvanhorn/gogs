@@ -211,6 +211,12 @@ type Repository struct {
 	PullsIgnoreWhitespace bool              `xorm:"NOT NULL DEFAULT false" gorm:"not null;default:FALSE"`
 	PullsAllowRebase      bool              `xorm:"NOT NULL DEFAULT false" gorm:"not null;default:FALSE"`
 	PullsAllowSquash      bool              `xorm:"NOT NULL DEFAULT false" gorm:"not null;default:FALSE"`
+	PullsAllowMerge       bool              `xorm:"NOT NULL DEFAULT true" gorm:"not null;default:TRUE"`
+	// PullsMergeMessage and PullsSquashMessage are the presets of the
+	// messages merge commits and squashing start with, e.g.,
+	// MergeMessageTitle.
+	PullsMergeMessage  string `xorm:"NOT NULL DEFAULT ''" gorm:"not null;default:''"`
+	PullsSquashMessage string `xorm:"NOT NULL DEFAULT ''" gorm:"not null;default:''"`
 
 	IsFork   bool `xorm:"NOT NULL DEFAULT false" gorm:"not null;default:FALSE"`
 	ForkID   int64
@@ -1235,16 +1241,17 @@ func CreateRepository(ctx context.Context, doer, owner *User, opts CreateRepoOpt
 	}
 
 	repo := &Repository{
-		OwnerID:      owner.ID,
-		Owner:        owner,
-		Name:         opts.Name,
-		LowerName:    strings.ToLower(opts.Name),
-		Description:  opts.Description,
-		IsPrivate:    opts.IsPrivate,
-		IsUnlisted:   opts.IsUnlisted,
-		EnableWiki:   true,
-		EnableIssues: true,
-		EnablePulls:  true,
+		OwnerID:         owner.ID,
+		Owner:           owner,
+		Name:            opts.Name,
+		LowerName:       strings.ToLower(opts.Name),
+		Description:     opts.Description,
+		IsPrivate:       opts.IsPrivate,
+		IsUnlisted:      opts.IsUnlisted,
+		EnableWiki:      true,
+		EnableIssues:    true,
+		EnablePulls:     true,
+		PullsAllowMerge: true,
 	}
 
 	sess := x.NewSession()
@@ -2540,16 +2547,17 @@ func ForkRepository(ctx context.Context, doer, owner *User, baseRepo *Repository
 	}
 
 	repo := &Repository{
-		OwnerID:       owner.ID,
-		Owner:         owner,
-		Name:          name,
-		LowerName:     strings.ToLower(name),
-		Description:   desc,
-		DefaultBranch: baseRepo.DefaultBranch,
-		IsPrivate:     baseRepo.IsPrivate,
-		IsUnlisted:    baseRepo.IsUnlisted,
-		IsFork:        true,
-		ForkID:        baseRepo.ID,
+		OwnerID:         owner.ID,
+		Owner:           owner,
+		Name:            name,
+		LowerName:       strings.ToLower(name),
+		Description:     desc,
+		DefaultBranch:   baseRepo.DefaultBranch,
+		IsPrivate:       baseRepo.IsPrivate,
+		IsUnlisted:      baseRepo.IsUnlisted,
+		IsFork:          true,
+		ForkID:          baseRepo.ID,
+		PullsAllowMerge: true,
 	}
 
 	sess := x.NewSession()

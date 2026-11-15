@@ -479,6 +479,7 @@ function AdvancedSettings({ owner, name, settings }: { owner: string; name: stri
   });
   const { formError } = formErrors(save.error);
   const set = (change: Partial<RepoAdvancedSettings>) => setForm({ ...form, ...change });
+  const noMergeMethod = form.enablePulls && !form.pullsAllowMerge && !form.pullsAllowSquash && !form.pullsAllowRebase;
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -640,34 +641,122 @@ function AdvancedSettings({ owner, name, settings }: { owner: string; name: stri
               checked={form.enablePulls}
               onChange={(enablePulls) => set({ enablePulls })}
             >
+              <p className="text-sm">{t("repo.settings.pulls.merge_methods_desc")}</p>
+              <div className="divide-y divide-(--color-border) rounded-md border border-(--color-border)">
+                <div className="flex flex-col gap-3 px-4 py-3">
+                  <CheckboxField
+                    id="pullsAllowMerge"
+                    label={t("repo.settings.pulls.allow_merge_commit")}
+                    description={t("repo.settings.pulls.allow_merge_commit_desc")}
+                    checked={form.pullsAllowMerge}
+                    onChange={(pullsAllowMerge) => set({ pullsAllowMerge })}
+                  />
+                  {form.pullsAllowMerge ? (
+                    <MessagePresetField
+                      id="pullsMergeMessage"
+                      description={t("repo.settings.pulls.default_merge_message_desc")}
+                      presets={["", "title", "title_description"]}
+                      value={form.pullsMergeMessage}
+                      onChange={(pullsMergeMessage) => set({ pullsMergeMessage })}
+                    />
+                  ) : null}
+                </div>
+                <div className="flex flex-col gap-3 px-4 py-3">
+                  <CheckboxField
+                    id="pullsAllowSquash"
+                    label={t("repo.settings.pulls.allow_squash_merge")}
+                    description={t("repo.settings.pulls.allow_squash_merge_desc")}
+                    checked={form.pullsAllowSquash}
+                    onChange={(pullsAllowSquash) => set({ pullsAllowSquash })}
+                  />
+                  {form.pullsAllowSquash ? (
+                    <MessagePresetField
+                      id="pullsSquashMessage"
+                      description={t("repo.settings.pulls.default_squash_message_desc")}
+                      presets={["", "title", "title_commits", "title_description"]}
+                      value={form.pullsSquashMessage}
+                      onChange={(pullsSquashMessage) => set({ pullsSquashMessage })}
+                    />
+                  ) : null}
+                </div>
+                <div className="px-4 py-3">
+                  <CheckboxField
+                    id="pullsAllowRebase"
+                    label={t("repo.settings.pulls.allow_rebase_merge")}
+                    description={t("repo.settings.pulls.allow_rebase_merge_desc")}
+                    checked={form.pullsAllowRebase}
+                    onChange={(pullsAllowRebase) => set({ pullsAllowRebase })}
+                  />
+                </div>
+              </div>
+              {noMergeMethod ? (
+                <p role="alert" className="text-sm text-(--color-destructive)">
+                  {t("repo.settings.pulls.no_merge_method")}
+                </p>
+              ) : null}
               <CheckboxField
                 id="pullsIgnoreWhitespace"
                 label={t("repo.settings.pulls.ignore_whitespace")}
                 checked={form.pullsIgnoreWhitespace}
                 onChange={(pullsIgnoreWhitespace) => set({ pullsIgnoreWhitespace })}
               />
-              <CheckboxField
-                id="pullsAllowRebase"
-                label={t("repo.settings.pulls.allow_rebase_merge")}
-                checked={form.pullsAllowRebase}
-                onChange={(pullsAllowRebase) => set({ pullsAllowRebase })}
-              />
-              <CheckboxField
-                id="pullsAllowSquash"
-                label={t("repo.settings.pulls.allow_squash_merge")}
-                checked={form.pullsAllowSquash}
-                onChange={(pullsAllowSquash) => set({ pullsAllowSquash })}
-              />
             </FeatureGroup>
           ) : null}
           <div>
-            <Button type="submit" variant="outline">
+            <Button type="submit" variant="outline" disabled={noMergeMethod}>
               {t("repo.settings.update_settings")}
             </Button>
           </div>
         </div>
       </fieldset>
     </form>
+  );
+}
+
+// MessagePresetField picks the message a merge style starts with, where the
+// empty preset is the default message.
+function MessagePresetField<P extends string>({
+  id,
+  description,
+  presets,
+  value,
+  onChange,
+}: {
+  id: string;
+  description: string;
+  presets: P[];
+  value: P;
+  onChange: (value: P) => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className="ml-6.5 flex flex-col gap-1">
+      <span id={`${id}-label`} className="text-sm font-medium">
+        {t("repo.settings.pulls.default_commit_message")}
+      </span>
+      <span id={`${id}-description`} className="text-sm text-(--color-muted-foreground)">
+        {description}
+      </span>
+      {/* Radix Select does not allow an empty value, so the default preset
+          is "default" here. */}
+      <Select value={value || "default"} onValueChange={(v) => onChange((v === "default" ? "" : v) as P)}>
+        <SelectTrigger
+          id={id}
+          aria-labelledby={`${id}-label`}
+          aria-describedby={`${id}-description`}
+          className="mt-1 h-8 w-auto max-w-full gap-2"
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {presets.map((preset) => (
+            <SelectItem key={preset || "default"} value={preset || "default"}>
+              {t(`repo.settings.pulls.message_${preset || "default"}`)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   );
 }
 

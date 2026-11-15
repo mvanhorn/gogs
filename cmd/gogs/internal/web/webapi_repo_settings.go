@@ -86,6 +86,12 @@ type repoAdvancedSettings struct {
 	PullsIgnoreWhitespace bool   `json:"pullsIgnoreWhitespace"`
 	PullsAllowRebase      bool   `json:"pullsAllowRebase"`
 	PullsAllowSquash      bool   `json:"pullsAllowSquash"`
+	PullsAllowMerge       bool   `json:"pullsAllowMerge"`
+	// PullsMergeMessage and PullsSquashMessage are the presets of the
+	// messages merge commits and squashing start with, empty for the
+	// default message.
+	PullsMergeMessage  string `json:"pullsMergeMessage" validate:"omitempty,oneof=title title_description"`
+	PullsSquashMessage string `json:"pullsSquashMessage" validate:"omitempty,oneof=title title_description title_commits"`
 }
 
 type repoSettings struct {
@@ -143,6 +149,9 @@ func getRepoSettings(viewer *database.User, rc *repoAdminContext) (statusCode in
 			PullsIgnoreWhitespace: repo.PullsIgnoreWhitespace,
 			PullsAllowRebase:      repo.PullsAllowRebase,
 			PullsAllowSquash:      repo.PullsAllowSquash,
+			PullsAllowMerge:       repo.PullsAllowMerge,
+			PullsMergeMessage:     repo.PullsMergeMessage,
+			PullsSquashMessage:    repo.PullsSquashMessage,
 		},
 		CanEnablePulls:        repo.CanEnablePulls(),
 		OwnerIsOrganization:   rc.Owner.IsOrganization(),
@@ -321,7 +330,10 @@ func postRepoMirrorSync(rc *repoAdminContext) (statusCode int, resp any, err err
 
 // putRepoAdvanced turns the wiki, the issues and the pull requests of the
 // repository on or off.
-func putRepoAdvanced(rc *repoAdminContext, req repoAdvancedSettings) (statusCode int, resp any, err error) {
+func putRepoAdvanced(l i18n.Locale, rc *repoAdminContext, req repoAdvancedSettings) (statusCode int, resp any, err error) {
+	if req.EnablePulls && !req.PullsAllowMerge && !req.PullsAllowSquash && !req.PullsAllowRebase {
+		return http.StatusUnprocessableEntity, &bindingErrorResponse{Error: l.Tr("repo.settings.pulls.no_merge_method")}, nil
+	}
 	repo := rc.Repo
 	repo.EnableWiki = req.EnableWiki
 	repo.AllowPublicWiki = req.AllowPublicWiki && req.EnableWiki && !req.EnableExternalWiki
@@ -337,6 +349,9 @@ func putRepoAdvanced(rc *repoAdminContext, req repoAdvancedSettings) (statusCode
 	repo.PullsIgnoreWhitespace = req.PullsIgnoreWhitespace
 	repo.PullsAllowRebase = req.PullsAllowRebase
 	repo.PullsAllowSquash = req.PullsAllowSquash
+	repo.PullsAllowMerge = req.PullsAllowMerge
+	repo.PullsMergeMessage = req.PullsMergeMessage
+	repo.PullsSquashMessage = req.PullsSquashMessage
 	if err = database.UpdateRepository(repo, false); err != nil {
 		log.Error("putRepoAdvanced: update repository %d: %v", repo.ID, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update repository")

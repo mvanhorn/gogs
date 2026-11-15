@@ -56,6 +56,7 @@ type repoPullInfo struct {
 	FileCount    int        `json:"fileCount"`
 	Merger       *issueUser `json:"merger,omitempty"`
 	MergedAt     *time.Time `json:"mergedAt,omitempty"`
+	AllowMerge   bool       `json:"allowMerge"`
 	AllowRebase  bool       `json:"allowRebase"`
 	AllowSquash  bool       `json:"allowSquash"`
 	// ViewerCanMerge is whether the viewer can merge it now.
@@ -108,6 +109,7 @@ func describePull(ctx context.Context, repoCtx *repoContext, issue *database.Iss
 		BaseBranch:  pull.BaseBranch,
 		HeadLabel:   pull.HeadUserName + "/" + pull.HeadBranch,
 		BaseLabel:   repoCtx.Owner.Name + "/" + pull.BaseBranch,
+		AllowMerge:  repo.PullsAllowMerge,
 		AllowRebase: repo.PullsAllowRebase,
 		AllowSquash: repo.PullsAllowSquash,
 	}
@@ -186,11 +188,11 @@ func describePull(ctx context.Context, repoCtx *repoContext, issue *database.Iss
 		info.ViewerCanMerge = repoCtx.Viewer.CanWrite()
 		if info.ViewerCanMerge {
 			pull.Issue = issue
-			info.MergeMessages = map[database.MergeStyle]database.MergeMessage{
-				database.MergeStyleRegular: pull.DefaultMergeMessage(database.MergeStyleRegular),
-			}
-			if repo.PullsAllowSquash {
-				info.MergeMessages[database.MergeStyleSquash] = pull.DefaultMergeMessage(database.MergeStyleSquash)
+			info.MergeMessages = map[database.MergeStyle]database.MergeMessage{}
+			for _, style := range []database.MergeStyle{database.MergeStyleRegular, database.MergeStyleSquash} {
+				if repo.AllowsMergeStyle(style) {
+					info.MergeMessages[style] = pull.DefaultMergeMessage(style, meta.Commits)
+				}
 			}
 		}
 	default:
@@ -290,6 +292,9 @@ func postRepoPullMerge(c flamego.Context, viewer *database.User, repoCtx *repoCo
 	style := database.MergeStyle(req.Style)
 	if style == "" {
 		style = database.MergeStyleRegular
+	}
+	if !repoCtx.Repo.AllowsMergeStyle(style) {
+		return http.StatusUnprocessableEntity, &bindingErrorResponse{Error: "merge style is not allowed"}, nil
 	}
 	if err = pull.Merge(c.Request().Context(), viewer, gitRepo, style, database.MergeMessage{Title: req.Title, Body: req.Body}); err != nil {
 		log.Error("postRepoPullMerge: merge pull request %d: %v", pull.ID, err)

@@ -186,6 +186,11 @@ export interface RepoAdvancedSettings {
   pullsIgnoreWhitespace: boolean;
   pullsAllowRebase: boolean;
   pullsAllowSquash: boolean;
+  pullsAllowMerge: boolean;
+  // The presets of the messages merge commits and squashing start with,
+  // empty for the default message.
+  pullsMergeMessage: "" | "title" | "title_description";
+  pullsSquashMessage: "" | "title" | "title_description" | "title_commits";
 }
 
 export interface RepoMirrorSettings {
@@ -735,6 +740,7 @@ export interface RepoPullInfo {
   fileCount: number;
   merger?: IssueUser;
   mergedAt?: string;
+  allowMerge: boolean;
   allowRebase: boolean;
   allowSquash: boolean;
   viewerCanMerge: boolean;
