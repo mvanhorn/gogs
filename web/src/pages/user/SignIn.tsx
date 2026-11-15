@@ -3,6 +3,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { CaptchaField } from "@/components/CaptchaField";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -19,6 +20,7 @@ export interface LoginSource {
 
 export interface SignInPage {
   loginSources: LoginSource[];
+  captchaEnabled: boolean;
 }
 
 interface SignInResponse {
@@ -31,7 +33,7 @@ interface SignInErrorResponse {
 }
 
 // Field display order; the first key with a server-side error gets focus.
-const FIELD_ORDER = ["username", "password"] as const;
+const FIELD_ORDER = ["username", "password", "captcha"] as const;
 
 const route = getRouteApi("/user/sign-in");
 
@@ -39,7 +41,7 @@ export function SignIn() {
   const { t } = useTranslation();
   usePageTitle(t("sign_in"));
   const navigate = useNavigate();
-  const { loginSources } = route.useLoaderData();
+  const { loginSources, captchaEnabled } = route.useLoaderData();
   const defaultSource = loginSources.find((s) => s.isDefault);
 
   const [username, setUsername] = useState("");
@@ -51,6 +53,14 @@ export function SignIn() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string | null>>({});
   const usernameRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
+  const [captcha, setCaptcha] = useState("");
+  const [captchaRefresh, setCaptchaRefresh] = useState(0);
+  const captchaRef = useRef<HTMLInputElement>(null);
+
+  function refreshCaptcha() {
+    setCaptcha("");
+    setCaptchaRefresh((value) => value + 1);
+  }
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -63,7 +73,7 @@ export function SignIn() {
           method: "POST",
           credentials: "same-origin",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username, password, loginSource }),
+          body: JSON.stringify({ username, password, loginSource, captcha }),
         });
         if (!res.ok) {
           const body = (await res.json().catch(() => ({}))) as SignInErrorResponse;
@@ -78,11 +88,14 @@ export function SignIn() {
             setFormError(t("auth.sign_in_failed"));
           }
           setSubmitting(false);
+          // The server used up the captcha on this attempt.
+          if (captchaEnabled) refreshCaptcha();
           // Defer focus past the React commit so the fieldset is re-enabled
           // (.focus() is a no-op while the field is inside a disabled fieldset).
           requestAnimationFrame(() => {
             if (focusField === "username") usernameRef.current?.focus();
             else if (focusField === "password") passwordRef.current?.focus();
+            else if (focusField === "captcha") captchaRef.current?.focus();
           });
           return;
         }
@@ -103,6 +116,7 @@ export function SignIn() {
       } catch {
         setFormError(t("auth.sign_in_failed"));
         setSubmitting(false);
+        if (captchaEnabled) refreshCaptcha();
       }
     })();
   }
@@ -156,7 +170,7 @@ export function SignIn() {
                     <Button variant="link" size="inline" asChild>
                       <a
                         href={subUrl("/user/reset-password")}
-                        tabIndex={submitting ? -1 : 6}
+                        tabIndex={submitting ? -1 : 8}
                         aria-disabled={submitting || undefined}
                         className={submitting ? "pointer-events-none opacity-50" : undefined}
                         onClick={(e) => {
@@ -229,14 +243,28 @@ export function SignIn() {
                   </div>
                 )}
 
+                {captchaEnabled && (
+                  <CaptchaField
+                    value={captcha}
+                    onChange={setCaptcha}
+                    refreshKey={captchaRefresh}
+                    onRefresh={refreshCaptcha}
+                    disabled={submitting}
+                    error={fieldErrors.captcha}
+                    invalid={"captcha" in fieldErrors}
+                    inputRef={captchaRef}
+                    tabIndex={[5, 6]}
+                  />
+                )}
+
                 <div className="mt-2 flex flex-col gap-3">
-                  <Button type="submit" disabled={submitting} tabIndex={5} className="w-full">
+                  <Button type="submit" disabled={submitting} tabIndex={7} className="w-full">
                     {submitting ? t("auth.sign_in_submitting") : t("sign_in")}
                   </Button>
                   <Button variant="link" size="inline" asChild className="self-center">
                     <a
                       href={subUrl("/user/sign-up")}
-                      tabIndex={submitting ? -1 : 7}
+                      tabIndex={submitting ? -1 : 9}
                       aria-disabled={submitting || undefined}
                       className={submitting ? "pointer-events-none opacity-50" : undefined}
                       onClick={(e) => {
