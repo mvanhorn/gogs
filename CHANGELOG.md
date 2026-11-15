@@ -13,6 +13,7 @@ All notable changes to Gogs are documented in this file.
 - Tracing of HTTP requests and Git operations, exported over OTLP when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. [#8487](https://github.com/gogs/gogs/pull/8487)
 - Repositories with SHA-256 object IDs, chosen when creating a repository or with `object_format` in the API. [#8496](https://github.com/gogs/gogs/pull/8496)
 - API endpoints to create branches and tags: `POST /repos/{owner}/{repo}/branches` and `POST /repos/{owner}/{repo}/tags`. [#8566](https://github.com/gogs/gogs/pull/8566)
+- API endpoints to get, create, edit and delete releases: `GET`, `PATCH` and `DELETE /repos/{owner}/{repo}/releases/{id}`, and `POST /repos/{owner}/{repo}/releases`. [#8187](https://github.com/gogs/gogs/issues/8187)
 
 ### Changed
 
