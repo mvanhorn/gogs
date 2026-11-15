@@ -225,6 +225,33 @@ func (r *Repository) commitToBranch(ctx context.Context, doer *User, oldBranch, 
 	})
 }
 
+// CreateReference creates the reference, e.g., "refs/heads/feature", at the
+// commit by pushing it as the doer, which runs the hooks of the repository.
+func (r *Repository) CreateReference(ctx context.Context, doer *User, ref, commitID string) error {
+	// Stopping midway, e.g., when the client disconnects, would skip the hooks.
+	ctx = context.WithoutCancel(ctx)
+
+	tmpRepo, cleanup, err := newTemporaryRepository(ctx, r.RepoPath())
+	if err != nil {
+		return errors.Wrap(err, "create temporary repository")
+	}
+	defer cleanup()
+
+	envs := ComposeHookEnvs(ComposeHookEnvsOptions{
+		AuthUser:  doer,
+		OwnerName: r.MustOwner().Name,
+		OwnerSalt: r.MustOwner().Salt,
+		RepoID:    r.ID,
+		RepoName:  r.Name,
+		RepoPath:  r.RepoPath(),
+	})
+	err = tmpRepo.Push(ctx, r.RepoPath(), commitID+":"+ref, git.PushOptions{Envs: envs})
+	if err != nil {
+		return errors.Wrapf(err, "push %s", ref)
+	}
+	return nil
+}
+
 // treeEntry returns the entry at the path in the tree of the commit, or nil if
 // there is none.
 func treeEntry(ctx context.Context, commit *git.Commit, path string) (*git.TreeEntry, error) {
