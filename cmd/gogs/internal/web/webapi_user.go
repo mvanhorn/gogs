@@ -16,6 +16,7 @@ import (
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/i18n"
@@ -300,6 +301,7 @@ func postUserSignIn(r *http.Request, w http.ResponseWriter, sess session.Session
 func completeSignIn(w http.ResponseWriter, sess session.Session, u *database.User) {
 	sess.Set("uid", u.ID)
 	sess.Set("uname", u.Name)
+	sess.Set(context.SessionKeyPasswordFingerprint, context.PasswordFingerprint(u))
 	sess.Delete("mfaUserID")
 
 	if conf.Security.EnableLoginStatusCookie {

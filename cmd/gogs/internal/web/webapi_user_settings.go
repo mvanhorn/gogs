@@ -6,10 +6,12 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/flamego/flamego"
+	"github.com/flamego/session"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/cryptox"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/i18n"
@@ -153,7 +155,7 @@ type userPasswordRequest struct {
 	Retype      string `json:"retype"`
 }
 
-func putUserPassword(c flamego.Context, l i18n.Locale, viewer *database.User, req userPasswordRequest) (statusCode int, resp any, err error) {
+func putUserPassword(c flamego.Context, sess session.Session, l i18n.Locale, viewer *database.User, req userPasswordRequest) (statusCode int, resp any, err error) {
 	if !viewer.IsLocal() {
 		return http.StatusForbidden, nil, errors.New(l.Tr("settings.password_change_disabled"))
 	}
@@ -170,6 +172,15 @@ func putUserPassword(c flamego.Context, l i18n.Locale, viewer *database.User, re
 		log.Error("putUserPassword: update user %d: %v", viewer.ID, err)
 		return http.StatusInternalServerError, nil, errors.Wrap(err, "update user")
 	}
+
+	// Every other session of the user is signed out by the new password, but
+	// this one stays signed in.
+	updated, err := database.Handle.Users().GetByID(c.Request().Context(), viewer.ID)
+	if err != nil {
+		log.Error("putUserPassword: get user %d: %v", viewer.ID, err)
+		return http.StatusInternalServerError, nil, errors.Wrap(err, "get user")
+	}
+	sess.Set(context.SessionKeyPasswordFingerprint, context.PasswordFingerprint(updated))
 	return http.StatusNoContent, nil, nil
 }
 
